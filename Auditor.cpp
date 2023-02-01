@@ -1,8 +1,6 @@
 #include "Auditor.h"
-#include <filesystem>
-namespace fs = std::filesystem;
 
-void Auditor::checkSystemAccount(std::vector<std::wstring>& systemAccountStorage) {
+void Auditor::checkSystemAccount() {
     //=========================== Define attributes for NetUserEnum function
     LPUSER_INFO_1 pBuf = NULL;
     LPUSER_INFO_1 pTmpBuf;
@@ -32,8 +30,8 @@ void Auditor::checkSystemAccount(std::vector<std::wstring>& systemAccountStorage
             //
             // Loop through the entries.
             //
-        std::cout << "Printing current system users - ID: T1136" << std::endl;
-        std::cout << "========================================\n" << std::endl;
+        //std::cout << "Printing current system users - ID: T1136" << std::endl;
+        //std::cout << "========================================\n" << std::endl;
             for (i = 0; (i < dwEntriesRead); i++)
             {
                 assert(pTmpBuf != NULL);
@@ -45,7 +43,7 @@ void Auditor::checkSystemAccount(std::vector<std::wstring>& systemAccountStorage
                 }
                 //  Print the name of the user account.
                 //wprintf(L"\t-- %s\n", pTmpBuf->usri1_name);
-                systemAccountStorage.push_back(pTmpBuf->usri1_name);
+                m_systemAccountStorage.push_back(pTmpBuf->usri1_name);
                 pTmpBuf++;
                 dwTotalCount++;
             }
@@ -59,15 +57,18 @@ void Auditor::checkFireWall() {
 
 void Auditor::checkStartItems() {
 
-    std::cout << "Printing Startup Items - ID: T1037.005" << std::endl;
-    std::cout << "========================================\n" << std::endl;
+    //std::cout << "Printing Startup Items - ID: T1037.005" << std::endl;
+    //std::cout << "========================================\n" << std::endl;
     try {
         std::string path = "C:\\Users\\User\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup";
-        for (const auto & entry : fs::directory_iterator(path))
+
+        for (const auto& entry : fs::directory_iterator(path))
             std::cout << entry.path() << std::endl;
+            std::cout << std::endl;
     }
     catch(std::exception& e) {
         std::cout << e.what();
+        std::cout << std::endl << std::endl;
     }
 
 }
@@ -83,13 +84,18 @@ void Auditor::checkCerts() {
 void Auditor::checkSchTasks() {
     std::cout << "Printing Scheduled Tasks - ID: T1053" << std::endl;
     std::cout << "========================================\n" << std::endl;
+    try {
+        system(" schtasks.exe /query /FO Table ");
+        std::cout << std::endl;
+    }
+    catch (std::exception& e) {
+        std::cout << e.what() << std::endl;
 
-    system(" schtasks.exe /query /FO Table ");
-
+    }
 }
 
 void::Auditor::checkFilePermissions() {
-    std::cout << "Printing Scheduled Tasks - ID: T1222.001" << std::endl;
+    std::cout << "Printing File Permissions - ID: T1222.001" << std::endl;
     std::cout << "========================================\n" << std::endl;
     try{
     // Define stuff
@@ -105,7 +111,7 @@ void::Auditor::checkFilePermissions() {
 
     // Get the handle of the file object.
 hFile = CreateFile(
-        TEXT("example.txt"),
+    TEXT("example.txt"),
         GENERIC_READ,
         FILE_SHARE_READ,
         NULL,
@@ -118,7 +124,7 @@ if (hFile == INVALID_HANDLE_VALUE) {
         DWORD dwErrorCode = 0;
         dwErrorCode = GetLastError();
         _tprintf(TEXT("CreateFile error = %d\n"), dwErrorCode);
-        std::cout << "ERROR -1 HANDLE FAILED: " << std::endl;
+        std::cout << "ERROR -1 HANDLE FAILED: " << std::endl << std::endl;
     }
 
 
@@ -160,8 +166,23 @@ DomainName = (LPTSTR)GlobalAlloc(
 
     // Print the account name.
     _tprintf(TEXT("Account owner = %s\n"), AcctName);
+    m_filePermissionStorage["example.txt"] = AcctName;
+    std::cout << std::endl;
     }
     catch (std::exception& e) {
         std::cout << e.what();
     }
+}
+
+void Auditor::postResults() {
+HostNode hostInstance;
+std::vector<HostNode> globalStorage; globalStorage.reserve(50);
+    hostInstance.setAccountList(m_systemAccountStorage);
+    hostInstance.setFilePermissions();
+    hostInstance.setSchTasks();
+    hostInstance.setStartItems();
+    
+    globalStorage.push_back(hostInstance);
+    globalStorage[0].printAccountList();
+
 }

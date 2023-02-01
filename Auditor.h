@@ -1,8 +1,15 @@
 #include <iostream>
 #include <string>
+#include <map>
+#include <filesystem>
+#include "HostNode.h"
+#include <vector>
+
 
 #ifndef PSAT_AUDITOR_H
 #define PSAT_AUDITOR_H
+
+namespace fs = std::filesystem;
 //====================================
 // Required for the NetUserEnum function (lmaccess.h)
 
@@ -38,7 +45,7 @@
 
 class Auditor {
 public:
-	void checkSystemAccount(std::vector<std::wstring>& systemAccountStorage);
+	void checkSystemAccount();
 
 	void checkFireWall();
 
@@ -48,9 +55,14 @@ public:
 
 	void checkCerts();
 
-	void checkFilePermissions(); 
+	void checkFilePermissions();
 
 	void checkSchTasks();
-};
 
+	void postResults();
+
+private:
+	std::map<std::string, LPTSTR> m_filePermissionStorage;
+	std::vector<std::wstring> m_systemAccountStorage;
+};
 #endif //PSAT_AUDITOR_H
